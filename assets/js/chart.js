@@ -95,12 +95,16 @@ export class PriceChart {
     this._onResize = this._onResize.bind(this);
     this._onMove = this._onMove.bind(this);
     this._onLeave = this._onLeave.bind(this);
+    this._onKeyDown = this._onKeyDown.bind(this);
+    this._onBlur = this._onBlur.bind(this);
 
     window.addEventListener('resize', this._onResize);
     canvas.addEventListener('mousemove', this._onMove);
     canvas.addEventListener('mouseleave', this._onLeave);
     canvas.addEventListener('touchstart', this._onMove, { passive: true });
     canvas.addEventListener('touchmove', this._onMove, { passive: true });
+    canvas.addEventListener('keydown', this._onKeyDown);
+    canvas.addEventListener('blur', this._onBlur);
   }
 
   /**
@@ -126,6 +130,8 @@ export class PriceChart {
     window.removeEventListener('resize', this._onResize);
     this.canvas.removeEventListener('mousemove', this._onMove);
     this.canvas.removeEventListener('mouseleave', this._onLeave);
+    this.canvas.removeEventListener('keydown', this._onKeyDown);
+    this.canvas.removeEventListener('blur', this._onBlur);
   }
 
   _onResize() {
@@ -148,6 +154,46 @@ export class PriceChart {
   }
 
   _onLeave() {
+    this.hoverIndex = null;
+    this.render();
+  }
+
+  /** キーボードでの読み取り操作。マウスを使えない環境でも値を辿れるようにする。 */
+  _onKeyDown(event) {
+    if (!this.data.length) return;
+    const last = this.data.length - 1;
+    const current = this.hoverIndex ?? last;
+    const jump = event.shiftKey ? 10 : 1;
+
+    let next = null;
+    switch (event.key) {
+      case 'ArrowLeft':
+        next = current - jump;
+        break;
+      case 'ArrowRight':
+        next = current + jump;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = last;
+        break;
+      case 'Escape':
+        this.hoverIndex = null;
+        this.render();
+        event.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    this.hoverIndex = Math.max(0, Math.min(last, next));
+    this.render();
+    event.preventDefault();
+  }
+
+  _onBlur() {
     this.hoverIndex = null;
     this.render();
   }

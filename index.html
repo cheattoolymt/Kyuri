@@ -17,7 +17,7 @@
 <header class="site-header">
   <div class="header-inner">
     <div class="brand">
-      <div class="brand-title">胡瓜価格、<span class="brand-sub">胡瓜食いたい</span></div>
+      <h1 class="brand-title">胡瓜価格、<span class="brand-sub">胡瓜食いたい</span></h1>
       <div class="brand-meta tabular" id="header-asof">読み込み中</div>
     </div>
     <nav class="site-nav" aria-label="セクション">
@@ -106,9 +106,12 @@
         <label class="checkbox"><input type="checkbox" id="toggle-retail"> 小売価格を重ねる</label>
       </div>
       <div class="chart-wrap">
-        <canvas id="chart" role="img" aria-label="胡瓜の卸売価格チャート"></canvas>
+        <canvas id="chart" tabindex="0" role="img"
+                aria-label="胡瓜の卸売価格チャート。フォーカス中は左右キーで日付を移動し、下部に四本値を読み上げます。"
+                aria-describedby="chart-readout"></canvas>
       </div>
-      <div class="chart-readout tabular" id="chart-readout"></div>
+      <p class="chart-hint">左右キーで 1 日移動 / Shift + 左右で 10 日移動 / Home・End で端へ / Esc で解除</p>
+      <div class="chart-readout tabular" id="chart-readout" role="status" aria-live="polite"></div>
     </div>
   </section>
 
@@ -122,15 +125,15 @@
       <table class="data">
         <thead>
           <tr>
-            <th>期間</th>
-            <th>起点</th>
-            <th>始値</th>
-            <th>現在値</th>
-            <th>変化率</th>
-            <th>平均</th>
-            <th>最高値</th>
-            <th>最安値</th>
-            <th>営業日</th>
+            <th scope="col">期間</th>
+            <th scope="col">起点</th>
+            <th scope="col">始値</th>
+            <th scope="col">現在値</th>
+            <th scope="col">変化率</th>
+            <th scope="col">平均</th>
+            <th scope="col">最高値</th>
+            <th scope="col">最安値</th>
+            <th scope="col">営業日</th>
           </tr>
         </thead>
         <tbody id="windows-body"></tbody>
@@ -148,14 +151,14 @@
       <table class="data">
         <thead>
           <tr>
-            <th>年</th>
-            <th>始値</th>
-            <th>終値</th>
-            <th>平均</th>
-            <th>高値</th>
-            <th>安値</th>
-            <th>営業日</th>
-            <th>卸売数量(kg)</th>
+            <th scope="col">年</th>
+            <th scope="col">始値</th>
+            <th scope="col">終値</th>
+            <th scope="col">平均</th>
+            <th scope="col">高値</th>
+            <th scope="col">安値</th>
+            <th scope="col">営業日</th>
+            <th scope="col">卸売数量(kg)</th>
           </tr>
         </thead>
         <tbody id="yearly-body"></tbody>
@@ -184,12 +187,12 @@
       <table class="data">
         <thead>
           <tr>
-            <th>市場</th>
-            <th>中央値</th>
-            <th>平均</th>
-            <th>最安</th>
-            <th>最高</th>
-            <th>営業日</th>
+            <th scope="col">市場</th>
+            <th scope="col">中央値</th>
+            <th scope="col">平均</th>
+            <th scope="col">最安</th>
+            <th scope="col">最高</th>
+            <th scope="col">営業日</th>
           </tr>
         </thead>
         <tbody id="markets-body"></tbody>
@@ -207,10 +210,10 @@
       <table class="data">
         <thead>
           <tr>
-            <th>調査週</th>
-            <th>円/kg</th>
-            <th>前週比</th>
-            <th>1本(約100g)</th>
+            <th scope="col">調査週</th>
+            <th scope="col">円/kg</th>
+            <th scope="col">前週比</th>
+            <th scope="col">1本(約100g)</th>
           </tr>
         </thead>
         <tbody id="retail-body"></tbody>
