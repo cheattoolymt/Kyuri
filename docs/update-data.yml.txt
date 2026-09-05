@@ -1,0 +1,70 @@
+name: Update cucumber price data
+
+# 東京都のオープンデータと農林水産省の小売価格を取り込み、
+# data/ と api/v1/ を再生成してコミットする。
+on:
+  schedule:
+    # 毎日 06:20 JST（21:20 UTC）。東京都の日報更新と小売価格の公表に追随する。
+    - cron: '20 21 * * *'
+  workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: '全年度を再取得する（既定は進行中の年度のみ）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 年度 CSV は 30MB 前後あるため、抽出済み行をキャッシュして
+      # 再取得を進行中の年度のみに抑える。
+      - name: Restore extracted-row cache
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: kyuri-rows-${{ github.run_id }}
+          restore-keys: |
+            kyuri-rows-
+
+      - name: Build data
+        run: |
+          if [ "${{ github.event.inputs.full_rebuild }}" = "true" ]; then
+            python3 tools/build_data.py --verbose
+          else
+            python3 tools/build_data.py --incremental --verbose
+          fi
+
+      - name: Validate output
+        run: python3 tools/validate.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  'kyuri-data-bot'
+          git config user.email 'kyuri-data-bot@users.noreply.github.com'
+          git add data api/v1
+          if git diff --cached --quiet; then
+            echo 'データに変更はありません。'
+            exit 0
+          fi
+          AS_OF=$(python3 -c "import json;print(json.load(open('data/index.json'))['summary']['asOf'])")
+          PRICE=$(python3 -c "import json;print(json.load(open('data/index.json'))['summary']['price'])")
+          git commit -m "chore(data): ${AS_OF} 時点 ${PRICE} 円/kg に更新"
+          git push

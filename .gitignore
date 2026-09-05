@@ -1,0 +1,11 @@
+# ローカル実行時の一時ファイル
+build.log
+server.log
+*.tmp
+__pycache__/
+*.pyc
+.DS_Store
+
+# 年度別に抽出した生データ。GitHub Actions のキャッシュで永続化するため
+# リポジトリには含めない（欠損時はビルドが自動的に再取得する）。
+cache/

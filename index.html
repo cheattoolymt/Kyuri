@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>胡瓜価格、胡瓜食いたい — 胡瓜の相場を株価のように見る</title>
+<meta name="description" content="東京都中央卸売市場の卸売価格と農林水産省の小売価格から、胡瓜（きゅうり）の値動きを株価のように表示します。日次・週次・年次・全期間の最安値と最高値、季節性、市場別の比較、公開 JSON API 付き。">
+<meta name="theme-color" content="#0c1013">
+<meta property="og:type" content="website">
+<meta property="og:title" content="胡瓜価格、胡瓜食いたい">
+<meta property="og:description" content="胡瓜の卸売価格を株価のように可視化。日次・週次・年次・全期間の相場と最安値を追跡します。">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="alternate" type="application/json" href="api/v1/summary.json" title="胡瓜価格 API サマリー">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-title">胡瓜価格、<span class="brand-sub">胡瓜食いたい</span></div>
+      <div class="brand-meta tabular" id="header-asof">読み込み中</div>
+    </div>
+    <nav class="site-nav" aria-label="セクション">
+      <a href="#board">相場</a>
+      <a href="#chart-section">チャート</a>
+      <a href="#windows">期間別</a>
+      <a href="#seasonality">季節性</a>
+      <a href="#markets">市場別</a>
+      <a href="#retail">小売</a>
+      <a href="#api">API</a>
+      <a href="#about">解説</a>
+    </nav>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
+<main>
+
+  <div class="error-banner" id="error-banner" role="alert" hidden></div>
+
+  <!-- 相場ボード -->
+  <section id="board">
+    <div class="section-head">
+      <h2>胡瓜 卸売価格指数</h2>
+      <span class="section-note">単位: 円/kg（東京都中央卸売市場 9 市場の建値を集計）</span>
+    </div>
+    <div class="panel quote">
+      <div class="quote-main">
+        <div class="quote-label">CUCUMBER / TOKYO WHOLESALE</div>
+        <div class="quote-price-row">
+          <span class="quote-price tabular" id="quote-price">—</span>
+          <span class="quote-unit">円 / kg</span>
+          <span class="quote-change flat" id="quote-change">—</span>
+        </div>
+        <div class="quote-asof" id="quote-asof">読み込み中</div>
+        <div class="quote-badges" id="quote-badges"></div>
+      </div>
+      <div class="quote-stats" id="quote-stats">
+        <div class="skeleton">読み込み中…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 判定 -->
+  <section id="verdict">
+    <div class="section-head">
+      <h2>今日、胡瓜を食うべきか</h2>
+      <span class="section-note">直近1年平均・前週比・当月の平年値から機械的に算出</span>
+    </div>
+    <div class="panel verdict">
+      <div class="verdict-headline">
+        <div class="verdict-title" id="verdict-title">判定中</div>
+        <div class="verdict-score tabular" id="verdict-score"></div>
+      </div>
+      <div class="verdict-body">
+        <h3>判定の根拠</h3>
+        <ul id="verdict-reasons"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- チャート -->
+  <section id="chart-section">
+    <div class="section-head">
+      <h2>値動きチャート</h2>
+      <span class="section-note tabular" id="chart-caption"></span>
+    </div>
+    <div class="panel chart-panel">
+      <div class="chart-toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-label">期間</span>
+          <div class="btn-group" id="range-buttons" role="group" aria-label="表示期間"></div>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">表示</span>
+          <div class="btn-group" id="mode-buttons" role="group" aria-label="チャート種別">
+            <button type="button" data-mode="candle" aria-pressed="true">ローソク足</button>
+            <button type="button" data-mode="line" aria-pressed="false">ライン</button>
+          </div>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="toggle-ma"> 移動平均</label>
+        <label class="checkbox"><input type="checkbox" id="toggle-volume"> 卸売数量</label>
+        <label class="checkbox"><input type="checkbox" id="toggle-retail"> 小売価格を重ねる</label>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart" role="img" aria-label="胡瓜の卸売価格チャート"></canvas>
+      </div>
+      <div class="chart-readout tabular" id="chart-readout"></div>
+    </div>
+  </section>
+
+  <!-- 期間別 -->
+  <section id="windows">
+    <div class="section-head">
+      <h2>期間別の値動きと最安値</h2>
+      <span class="section-note">高値・安値は終値ベース。日内の建値レンジは API の intradayHigh / intradayLow を参照</span>
+    </div>
+    <div class="panel table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>期間</th>
+            <th>起点</th>
+            <th>始値</th>
+            <th>現在値</th>
+            <th>変化率</th>
+            <th>平均</th>
+            <th>最高値</th>
+            <th>最安値</th>
+            <th>営業日</th>
+          </tr>
+        </thead>
+        <tbody id="windows-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 年次 -->
+  <section id="yearly">
+    <div class="section-head">
+      <h2>年次サマリー</h2>
+      <span class="section-note">暦年ごとの四本値・平均・卸売数量</span>
+    </div>
+    <div class="panel table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>年</th>
+            <th>始値</th>
+            <th>終値</th>
+            <th>平均</th>
+            <th>高値</th>
+            <th>安値</th>
+            <th>営業日</th>
+            <th>卸売数量(kg)</th>
+          </tr>
+        </thead>
+        <tbody id="yearly-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 季節性 -->
+  <section id="seasonality">
+    <div class="section-head">
+      <h2>月別の平年値</h2>
+      <span class="section-note" id="season-note"></span>
+    </div>
+    <div class="panel">
+      <div class="season-grid" id="season-grid"></div>
+    </div>
+  </section>
+
+  <!-- 市場別 -->
+  <section id="markets">
+    <div class="section-head">
+      <h2>市場別の水準（直近90日）</h2>
+      <span class="section-note">中央値が安い順。同じ日でも市場によって数割の差が出る</span>
+    </div>
+    <div class="panel table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>市場</th>
+            <th>中央値</th>
+            <th>平均</th>
+            <th>最安</th>
+            <th>最高</th>
+            <th>営業日</th>
+          </tr>
+        </thead>
+        <tbody id="markets-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 小売 -->
+  <section id="retail">
+    <div class="section-head">
+      <h2>小売価格（全国平均・週次）</h2>
+      <span class="section-note" id="retail-note"></span>
+    </div>
+    <div class="panel table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>調査週</th>
+            <th>円/kg</th>
+            <th>前週比</th>
+            <th>1本(約100g)</th>
+          </tr>
+        </thead>
+        <tbody id="retail-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- API -->
+  <section id="api">
+    <div class="section-head">
+      <h2>JSON API</h2>
+      <span class="section-note">認証不要・CORS 制限なしの静的 JSON。1 日 1 回更新</span>
+    </div>
+    <div class="panel api-list">
+      <div class="api-row">
+        <code>api/v1/summary.json</code>
+        <p>現在値、前営業日比、各期間（1日／1週／1月／3月／6月／1年／3年／5年）の高値・安値・平均、過去最安値と最高値。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/lowest.json</code>
+        <p>最安値・最高値だけを抜き出した軽量エンドポイント。期間別の下限・上限も含む。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/daily.json</code>
+        <p>日次の全系列。四本値、建値件数、卸売数量、市場別の内訳、日内レンジ。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/daily/{年}.json</code>
+        <p>年ごとに分割した日次系列。必要な年だけ取得する場合に使う。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/weekly.json</code>
+        <p>ISO 週単位に畳み込んだ四本値。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/monthly.json</code>
+        <p>月単位に畳み込んだ四本値。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/yearly.json</code>
+        <p>暦年単位の四本値と平均。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/fiscal.json</code>
+        <p>年度（4月始まり）単位の四本値と平均。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/seasonality.json</code>
+        <p>月別の平年値（平均・中央値・下限・上限）。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/markets.json</code>
+        <p>直近90日の市場別水準。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/retail.json</code>
+        <p>農林水産省の全国平均小売価格（週次）。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/meta.json</code>
+        <p>生成時刻、データ源、収録期間などのメタ情報。</p>
+      </div>
+      <div class="api-row">
+        <code>api/v1/index.json</code>
+        <p>利用可能なエンドポイントの一覧。</p>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:16px">
+      <h3>使用例</h3>
+    </div>
+    <pre class="code"><code># 現在値と過去最安値を取得
+curl -s https://cheattoolymt.github.io/Kyuri/api/v1/summary.json \
+  | jq '{price: .summary.price, low: .summary.allTime.low}'
+
+# 期間ごとの最安値
+curl -s https://cheattoolymt.github.io/Kyuri/api/v1/lowest.json | jq .windows
+
+# 2025 年の日次系列
+curl -s https://cheattoolymt.github.io/Kyuri/api/v1/daily/2025.json | jq '.series[0]'</code></pre>
+  </section>
+
+  <!-- 解説 -->
+  <section id="about">
+    <div class="section-head">
+      <h2>データと算出方法</h2>
+    </div>
+    <div class="panel" style="padding:18px 22px">
+      <h3>価格の定義</h3>
+      <p style="font-size:0.86rem;color:var(--text-muted);margin-top:0">
+        東京都中央卸売市場が公表する日報の青果・販売結果価格から、品名「きゅうり」の行を抽出しています。
+        日報の価格は取引単位（1 箱あたりの kg 数）に対する金額なので、単位で除して 1kg あたりの円に正規化しています。
+        代表値には相対取引・商物分離・第三者販売の中値を用い、小口や端物の建値が混ざる「せり・入札」は
+        参考値として別に保持しています。
+      </p>
+
+      <h3>四本値の定義</h3>
+      <p style="font-size:0.86rem;color:var(--text-muted);margin-top:0">
+        日報は 1 日単位の集計値であり時刻を持たないため、株価のような時系列の四本値は存在しません。
+        そこで本サイトでは、終値をその日の中値建値の中央値、始値を前営業日の終値、高値と安値を
+        その日の高値建値・安値建値それぞれの中央値と定義しています。単純な最大・最小を使うと
+        単発の飛び値に値幅が引っ張られるため中央値を採り、分布の両端は別項目として保持しています。
+      </p>
+
+      <h3>更新頻度と速報性</h3>
+      <p style="font-size:0.86rem;color:var(--text-muted);margin-top:0">
+        東京都のオープンデータは年度単位の CSV で提供され、更新は概ね年度単位です。
+        したがって表示される「現在値」は必ずしも本日の相場ではなく、公表済みデータの最終営業日の値です。
+        本サイトのビルドは 1 日 1 回自動実行され、新しいデータが公表され次第、自動的に反映されます。
+        小売価格は農林水産省の食品価格動向調査（週次）に基づき、より新しい時点まで追跡できます。
+      </p>
+
+      <h3>出典</h3>
+      <ul id="source-list" style="font-size:0.85rem;color:var(--text-muted)"></ul>
+
+      <h3>免責</h3>
+      <p style="font-size:0.86rem;color:var(--text-muted);margin-top:0">
+        本サイトは公的統計を再集計した参考情報です。日報の値は速報値であり、確定値と異なる場合があります。
+        取引・投資・仕入れの判断に用いる場合は、必ず一次資料を確認してください。
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="status-line" id="status-line"></div>
+    <div>
+      胡瓜価格、胡瓜食いたい — 東京都中央卸売市場（CC BY 4.0）および農林水産省の公開データを再集計。
+      集計コードとデータは <a href="https://github.com/cheattoolymt/Kyuri" target="_blank" rel="noopener">GitHub</a> で公開しています。
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
